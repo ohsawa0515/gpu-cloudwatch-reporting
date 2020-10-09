@@ -9,7 +9,6 @@ import (
 	"syscall"
 	"time"
 
-	"cloud.google.com/go/compute/metadata"
 	"github.com/NVIDIA/gpu-monitoring-tools/bindings/go/nvml"
 	"golang.org/x/sync/errgroup"
 )
@@ -37,7 +36,7 @@ func gpuUtilizationTicker(ctx context.Context, client *Client, devices []*nvml.D
 		select {
 		case <-sendTicker.C:
 			sentMetric := metric / float64(count)
-			if err := client.reportGpuMetric("gpu_usage", float64(sentMetric)); err != nil {
+			if err := client.reportGpuMetrics("gpu_usage", float64(sentMetric)); err != nil {
 				return err
 			}
 			metric = 0
@@ -70,7 +69,7 @@ func gpuMemoryUtilizationTicker(ctx context.Context, client *Client, devices []*
 		select {
 		case <-sendTicker.C:
 			sentMetric := metric / float64(count)
-			if err := client.reportGpuMetric("memory_usage", float64(sentMetric)); err != nil {
+			if err := client.reportGpuMetrics("memory_usage", float64(sentMetric)); err != nil {
 				return err
 			}
 			metric = 0
@@ -91,7 +90,7 @@ func gpuMemoryUtilizationTicker(ctx context.Context, client *Client, devices []*
 	}
 }
 
-func gpuTemperatureTicker(ctx context.Context, client *gpuStackdriverClient, devices []*nvml.Device) error {
+func gpuTemperatureTicker(ctx context.Context, client *Client, devices []*nvml.Device) error {
 	sendTicker := time.NewTicker(time.Second * SendIntervalSecond)
 	collectTicker := time.NewTicker(time.Second * CollectIntervalSecond)
 	defer sendTicker.Stop()
@@ -103,7 +102,7 @@ func gpuTemperatureTicker(ctx context.Context, client *gpuStackdriverClient, dev
 		select {
 		case <-sendTicker.C:
 			sentMetric := metric / float64(count)
-			if err := client.reportGpuMetric("temperature", float64(sentMetric)); err != nil {
+			if err := client.reportGpuMetrics("temperature", float64(sentMetric)); err != nil {
 				return err
 			}
 		case <-collectTicker.C:
