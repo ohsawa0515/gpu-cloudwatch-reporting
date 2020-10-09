@@ -13,27 +13,28 @@ import (
 var Metrics map[string]Metric
 
 const (
-	NameSpace = "GPUMonitor"
+	NameSpace    = "GPUMonitor"
 	DimensionAsg = "AutoScalingGroupName"
 	DimensionEC2 = "InstanceID"
 )
 
 type Metric struct {
 	MetricName string
-	Unit string
+	Unit       string
 }
 
 type Client struct {
-	instanceID	string
+	instanceID           string
 	autoScalingGroupName string
-	cloudwatchSvc cloudwatchiface.CloudWatchAPI
-	ctx *context.Context
+	cloudwatchSvc        cloudwatchiface.CloudWatchAPI
+	ctx                  *context.Context
 }
 
 func init() {
-	Metrics["gpu_usage"]    = Metric{MetricName: "GPUUsage",    Unit: "Percent"}
+	Metrics = map[string]Metric{}
+	Metrics["gpu_usage"] = Metric{MetricName: "GPUUsage", Unit: "Percent"}
 	Metrics["memory_usage"] = Metric{MetricName: "MemoryUsage", Unit: "Percent"}
-	Metrics["temperature"]  = Metric{MetricName: "Temperature", Unit: "None"}
+	Metrics["temperature"] = Metric{MetricName: "Temperature", Unit: "None"}
 }
 
 func NewClient(ctx context.Context, autoScalingGroupName, region string) (*Client, error) {
@@ -45,9 +46,9 @@ func NewClient(ctx context.Context, autoScalingGroupName, region string) (*Clien
 		return nil, err
 	}
 	return &Client{
-		instanceID: instanceID,
+		instanceID:           instanceID,
 		autoScalingGroupName: autoScalingGroupName,
-		cloudwatchSvc: cloudwatch.New(sess),
+		cloudwatchSvc:        cloudwatch.New(sess),
 	}, nil
 }
 
@@ -59,18 +60,18 @@ func (client *Client) reportGpuMetrics(metric string, value float64) error {
 			{
 				Dimensions: []*cloudwatch.Dimension{
 					{
-						Name: aws.String(DimensionAsg),
+						Name:  aws.String(DimensionAsg),
 						Value: aws.String(client.autoScalingGroupName),
 					},
 					{
-						Name: aws.String(DimensionEC2),
+						Name:  aws.String(DimensionEC2),
 						Value: aws.String(client.instanceID),
 					},
 				},
 				MetricName: aws.String(Metrics[metric].MetricName),
-				Unit: aws.String(Metrics[metric].Unit),
-				Timestamp: aws.Time(timestamp),
-				Value: aws.Float64(value),
+				Unit:       aws.String(Metrics[metric].Unit),
+				Timestamp:  aws.Time(timestamp),
+				Value:      aws.Float64(value),
 			},
 		},
 	}); err != nil {

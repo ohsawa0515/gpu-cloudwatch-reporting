@@ -20,7 +20,7 @@ const SendIntervalSecond = 60
 
 /*
 The number of seconds between collecting GPU metrics.
-Send the average value to Stackdriver at SendIntervalSecond.
+Send the average value to CloudWatch at SendIntervalSecond.
 */
 const CollectIntervalSecond = 5
 
