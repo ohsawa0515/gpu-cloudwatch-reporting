@@ -36,7 +36,7 @@ func gpuUtilizationTicker(ctx context.Context, client *Client, devices []*nvml.D
 		select {
 		case <-sendTicker.C:
 			sentMetric := metric / float64(count)
-			if err := client.reportGpuMetrics("gpu_usage", float64(sentMetric)); err != nil {
+			if err := client.ReportGpuMetrics("gpu_usage", float64(sentMetric)); err != nil {
 				return err
 			}
 			metric = 0
@@ -69,7 +69,7 @@ func gpuMemoryUtilizationTicker(ctx context.Context, client *Client, devices []*
 		select {
 		case <-sendTicker.C:
 			sentMetric := metric / float64(count)
-			if err := client.reportGpuMetrics("memory_usage", float64(sentMetric)); err != nil {
+			if err := client.ReportGpuMetrics("memory_usage", float64(sentMetric)); err != nil {
 				return err
 			}
 			metric = 0
@@ -102,7 +102,7 @@ func gpuTemperatureTicker(ctx context.Context, client *Client, devices []*nvml.D
 		select {
 		case <-sendTicker.C:
 			sentMetric := metric / float64(count)
-			if err := client.reportGpuMetrics("temperature", float64(sentMetric)); err != nil {
+			if err := client.ReportGpuMetrics("temperature", float64(sentMetric)); err != nil {
 				return err
 			}
 		case <-collectTicker.C:
@@ -169,7 +169,7 @@ func Run() error {
 	}
 
 	ctx := context.Background()
-	client, err := NewClient(ctx, "bc-deep-whitening", "ap-northeast-1")
+	client, err := NewClient(ctx, "ap-northeast-1")
 	if err != nil {
 		return err
 	}

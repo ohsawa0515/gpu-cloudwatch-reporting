@@ -37,11 +37,15 @@ func init() {
 	Metrics["temperature"] = Metric{MetricName: "Temperature", Unit: "None"}
 }
 
-func NewClient(ctx context.Context, autoScalingGroupName, region string) (*Client, error) {
+func NewClient(ctx context.Context, region string) (*Client, error) {
 	sess := session.Must(session.NewSession(
 		&aws.Config{Region: aws.String(region)},
 	))
 	instanceID, err := getInstanceId(sess)
+	if err != nil {
+		return nil, err
+	}
+	autoScalingGroupName, err := getAutoScalingGroupName(sess, instanceID)
 	if err != nil {
 		return nil, err
 	}
@@ -52,30 +56,50 @@ func NewClient(ctx context.Context, autoScalingGroupName, region string) (*Clien
 	}, nil
 }
 
-func (client *Client) reportGpuMetrics(metric string, value float64) error {
-	timestamp := time.Now().UTC()
+func (client *Client) ReportGpuMetrics(metric string, value float64) error {
 	if _, err := client.cloudwatchSvc.PutMetricData(&cloudwatch.PutMetricDataInput{
-		Namespace: aws.String(NameSpace),
-		MetricData: []*cloudwatch.MetricDatum{
-			{
-				Dimensions: []*cloudwatch.Dimension{
-					{
-						Name:  aws.String(DimensionAsg),
-						Value: aws.String(client.autoScalingGroupName),
-					},
-					{
-						Name:  aws.String(DimensionEC2),
-						Value: aws.String(client.instanceID),
-					},
-				},
-				MetricName: aws.String(Metrics[metric].MetricName),
-				Unit:       aws.String(Metrics[metric].Unit),
-				Timestamp:  aws.Time(timestamp),
-				Value:      aws.Float64(value),
-			},
-		},
+		Namespace:  aws.String(NameSpace),
+		MetricData: client.buildCloudWatchMetricDatum(metric, value),
 	}); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (client *Client) buildCloudWatchMetricDatum(metric string, value float64) []*cloudwatch.MetricDatum {
+	var metricDatum []*cloudwatch.MetricDatum
+	timestamp := time.Now().UTC()
+	metricDatum = append(metricDatum, &cloudwatch.MetricDatum{
+		Dimensions: []*cloudwatch.Dimension{
+			{
+				Name:  aws.String(DimensionEC2),
+				Value: aws.String(client.instanceID),
+			},
+		},
+		MetricName: aws.String(Metrics[metric].MetricName),
+		Unit:       aws.String(Metrics[metric].Unit),
+		Timestamp:  aws.Time(timestamp),
+		Value:      aws.Float64(value),
+	})
+
+	// if asg is found, add dimension of asg name.
+	if len(client.autoScalingGroupName) > 0 {
+		metricDatum[0].Dimensions = append(metricDatum[0].Dimensions, &cloudwatch.Dimension{
+			Name:  aws.String(DimensionAsg),
+			Value: aws.String(client.autoScalingGroupName),
+		})
+		metricDatum = append(metricDatum, &cloudwatch.MetricDatum{
+			Dimensions: []*cloudwatch.Dimension{
+				{
+					Name:  aws.String(DimensionAsg),
+					Value: aws.String(client.autoScalingGroupName),
+				},
+			},
+			MetricName: aws.String(Metrics[metric].MetricName),
+			Unit:       aws.String(Metrics[metric].Unit),
+			Timestamp:  aws.Time(timestamp),
+			Value:      aws.Float64(value),
+		})
+	}
+	return metricDatum
 }
