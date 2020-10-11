@@ -19,7 +19,7 @@ var (
 
 const (
 	DimensionAsg = "AutoScalingGroupName"
-	DimensionEC2 = "InstanceID"
+	DimensionEC2 = "InstanceId"
 )
 
 type Metric struct {
