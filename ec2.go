@@ -7,9 +7,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
+// AutoScalingTagName indicates tag name created when it runs under auto scaling group.
 const AutoScalingTagName = "aws:autoscaling:groupName"
 
-func getInstanceId(sess *session.Session) (string, error) {
+func getInstanceID(sess *session.Session) (string, error) {
 	svc := ec2metadata.New(sess)
 	return svc.GetMetadata("instance-id")
 }

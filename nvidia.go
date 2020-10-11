@@ -14,11 +14,12 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// NvidiaConfig is the defined config by envconfig.
 type NvidiaConfig struct {
-	// Number of seconds between sending metrics to CloudWatch
+	// SendIntervalSecond indicates the number of seconds between sending metrics to CloudWatch.
 	SendIntervalSecond time.Duration `default:"60s"  split_words:"true"`
-	// The number of seconds between collecting GPU metrics.
-	// Send the average value to CloudWatch at SendIntervalSecond.
+	// CollectIntervalSecond indicates the number of seconds between collecting GPU metrics.
+	// Send the average value which is collected every SendIntervalSecond to CloudWatch.
 	CollectIntervalSecond time.Duration `default:"5s"  split_words:"true"`
 }
 
@@ -52,10 +53,10 @@ func gpuUtilizationTicker(ctx context.Context, client *Client, devices []*nvml.D
 			for i, device := range devices {
 				st, err := device.Status()
 				if err != nil {
-					return fmt.Errorf("error getting device %d status: %v\n", i, err)
+					return fmt.Errorf("error getting device %d status: %v", i, err)
 				}
 				metric += float64(*st.Utilization.GPU)
-				count += 1
+				count++
 			}
 		case <-ctx.Done():
 			log.Println("Stop GPU utilization")
@@ -85,10 +86,10 @@ func gpuMemoryUtilizationTicker(ctx context.Context, client *Client, devices []*
 			for i, device := range devices {
 				st, err := device.Status()
 				if err != nil {
-					return fmt.Errorf("error getting device %d status: %v\n", i, err)
+					return fmt.Errorf("error getting device %d status: %v", i, err)
 				}
 				metric += float64(*st.Utilization.Memory)
-				count += 1
+				count++
 			}
 		case <-ctx.Done():
 			log.Println("Stop GPU memory utilization ticker")
@@ -116,10 +117,10 @@ func gpuTemperatureTicker(ctx context.Context, client *Client, devices []*nvml.D
 			for i, device := range devices {
 				st, err := device.Status()
 				if err != nil {
-					return fmt.Errorf("error getting device %d status: %v\n", i, err)
+					return fmt.Errorf("error getting device %d status: %v", i, err)
 				}
 				metric += float64(*st.Temperature)
-				count += 1
+				count++
 			}
 		case <-ctx.Done():
 			log.Println("Stop GPU temperature ticker")
@@ -155,6 +156,7 @@ func signalContext(ctx context.Context) context.Context {
 	return parent
 }
 
+// Run runs collect and send gpu metrics.
 func Run() error {
 	if err := nvml.Init(); err != nil {
 		return err
@@ -170,7 +172,7 @@ func Run() error {
 	for i := uint(0); i < count; i++ {
 		device, err := nvml.NewDevice(i)
 		if err != nil {
-			return fmt.Errorf("Error getting device %d: %v\n", i, err)
+			return fmt.Errorf("error getting device %d: %v", i, err)
 		}
 		devices = append(devices, device)
 	}

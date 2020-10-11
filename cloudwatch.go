@@ -12,21 +12,19 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
-var (
-	Metrics  map[string]Metric
-	cwConfig CloudWatchConfig
-)
-
 const (
+	// DimensionAsg indicates dimension CloudWatch as auto scaling group.
 	DimensionAsg = "AutoScalingGroupName"
+	// DimensionEC2 indicates dimension CloudWatch as EC2.
 	DimensionEC2 = "InstanceId"
 )
 
-type Metric struct {
-	MetricName string
-	Unit       string
+type metric struct {
+	metricName string
+	unit       string
 }
 
+// Client -
 type Client struct {
 	instanceID           string
 	autoScalingGroupName string
@@ -34,27 +32,34 @@ type Client struct {
 	ctx                  *context.Context
 }
 
+// CloudWatchConfig is the defined config by envconfig.
 type CloudWatchConfig struct {
 	NameSpace string `default:"GPUMonitor"`
 	Region    string `default:"us-east-1"`
 }
 
+var (
+	metrics  map[string]metric
+	cwConfig CloudWatchConfig
+)
+
 func init() {
-	Metrics = map[string]Metric{}
-	Metrics["gpu_usage"] = Metric{MetricName: "GPUUsage", Unit: "Percent"}
-	Metrics["memory_usage"] = Metric{MetricName: "MemoryUsage", Unit: "Percent"}
-	Metrics["temperature"] = Metric{MetricName: "Temperature", Unit: "None"}
+	metrics = map[string]metric{}
+	metrics["gpu_usage"] = metric{metricName: "GPUUsage", unit: "Percent"}
+	metrics["memory_usage"] = metric{metricName: "MemoryUsage", unit: "Percent"}
+	metrics["temperature"] = metric{metricName: "Temperature", unit: "None"}
 
 	if err := envconfig.Process("", &cwConfig); err != nil {
 		log.Fatal(err)
 	}
 }
 
+// NewClient creates a new client of CloudWatch.
 func NewClient(ctx context.Context) (*Client, error) {
 	sess := session.Must(session.NewSession(
 		&aws.Config{Region: aws.String(cwConfig.Region)},
 	))
-	instanceID, err := getInstanceId(sess)
+	instanceID, err := getInstanceID(sess)
 	if err != nil {
 		return nil, err
 	}
@@ -69,6 +74,7 @@ func NewClient(ctx context.Context) (*Client, error) {
 	}, nil
 }
 
+// ReportGpuMetrics send gpu metrics to CloudWatch.
 func (client *Client) ReportGpuMetrics(metric string, value float64) error {
 	if _, err := client.cloudwatchSvc.PutMetricData(&cloudwatch.PutMetricDataInput{
 		Namespace:  aws.String(cwConfig.NameSpace),
@@ -89,8 +95,8 @@ func (client *Client) buildCloudWatchMetricDatum(metric string, value float64) [
 				Value: aws.String(client.instanceID),
 			},
 		},
-		MetricName: aws.String(Metrics[metric].MetricName),
-		Unit:       aws.String(Metrics[metric].Unit),
+		MetricName: aws.String(metrics[metric].metricName),
+		Unit:       aws.String(metrics[metric].unit),
 		Timestamp:  aws.Time(timestamp),
 		Value:      aws.Float64(value),
 	})
@@ -108,8 +114,8 @@ func (client *Client) buildCloudWatchMetricDatum(metric string, value float64) [
 					Value: aws.String(client.autoScalingGroupName),
 				},
 			},
-			MetricName: aws.String(Metrics[metric].MetricName),
-			Unit:       aws.String(Metrics[metric].Unit),
+			MetricName: aws.String(metrics[metric].metricName),
+			Unit:       aws.String(metrics[metric].unit),
 			Timestamp:  aws.Time(timestamp),
 			Value:      aws.Float64(value),
 		})
