@@ -10,23 +10,29 @@ import (
 	"time"
 
 	"github.com/NVIDIA/gpu-monitoring-tools/bindings/go/nvml"
+	"github.com/kelseyhightower/envconfig"
 	"golang.org/x/sync/errgroup"
 )
 
-/*
-Number of seconds between sending metrics to CloudWatch
-*/
-const SendIntervalSecond = 60
+type NvidiaConfig struct {
+	// Number of seconds between sending metrics to CloudWatch
+	SendIntervalSecond time.Duration `default:"60s"  split_words:"true"`
+	// The number of seconds between collecting GPU metrics.
+	// Send the average value to CloudWatch at SendIntervalSecond.
+	CollectIntervalSecond time.Duration `default:"5s"  split_words:"true"`
+}
 
-/*
-The number of seconds between collecting GPU metrics.
-Send the average value to CloudWatch at SendIntervalSecond.
-*/
-const CollectIntervalSecond = 5
+var nvidiaConfig NvidiaConfig
+
+func init() {
+	if err := envconfig.Process("", &nvidiaConfig); err != nil {
+		log.Fatal(err)
+	}
+}
 
 func gpuUtilizationTicker(ctx context.Context, client *Client, devices []*nvml.Device) error {
-	sendTicker := time.NewTicker(time.Second * SendIntervalSecond)
-	collectTicker := time.NewTicker(time.Second * CollectIntervalSecond)
+	sendTicker := time.NewTicker(nvidiaConfig.SendIntervalSecond)
+	collectTicker := time.NewTicker(nvidiaConfig.CollectIntervalSecond)
 	defer sendTicker.Stop()
 	defer collectTicker.Stop()
 
@@ -35,6 +41,7 @@ func gpuUtilizationTicker(ctx context.Context, client *Client, devices []*nvml.D
 	for {
 		select {
 		case <-sendTicker.C:
+			fmt.Println(metric)
 			sentMetric := metric / float64(count)
 			if err := client.ReportGpuMetrics("gpu_usage", float64(sentMetric)); err != nil {
 				return err
@@ -58,8 +65,8 @@ func gpuUtilizationTicker(ctx context.Context, client *Client, devices []*nvml.D
 }
 
 func gpuMemoryUtilizationTicker(ctx context.Context, client *Client, devices []*nvml.Device) error {
-	sendTicker := time.NewTicker(time.Second * SendIntervalSecond)
-	collectTicker := time.NewTicker(time.Second * CollectIntervalSecond)
+	sendTicker := time.NewTicker(nvidiaConfig.SendIntervalSecond)
+	collectTicker := time.NewTicker(nvidiaConfig.CollectIntervalSecond)
 	defer sendTicker.Stop()
 	defer collectTicker.Stop()
 
@@ -91,8 +98,8 @@ func gpuMemoryUtilizationTicker(ctx context.Context, client *Client, devices []*
 }
 
 func gpuTemperatureTicker(ctx context.Context, client *Client, devices []*nvml.Device) error {
-	sendTicker := time.NewTicker(time.Second * SendIntervalSecond)
-	collectTicker := time.NewTicker(time.Second * CollectIntervalSecond)
+	sendTicker := time.NewTicker(nvidiaConfig.SendIntervalSecond)
+	collectTicker := time.NewTicker(nvidiaConfig.CollectIntervalSecond)
 	defer sendTicker.Stop()
 	defer collectTicker.Stop()
 
@@ -169,7 +176,7 @@ func Run() error {
 	}
 
 	ctx := context.Background()
-	client, err := NewClient(ctx, "ap-northeast-1")
+	client, err := NewClient(ctx)
 	if err != nil {
 		return err
 	}

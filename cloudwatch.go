@@ -2,18 +2,22 @@ package main
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
+	"github.com/kelseyhightower/envconfig"
 )
 
-var Metrics map[string]Metric
+var (
+	Metrics  map[string]Metric
+	cwConfig CloudWatchConfig
+)
 
 const (
-	NameSpace    = "GPUMonitor"
 	DimensionAsg = "AutoScalingGroupName"
 	DimensionEC2 = "InstanceID"
 )
@@ -30,16 +34,25 @@ type Client struct {
 	ctx                  *context.Context
 }
 
+type CloudWatchConfig struct {
+	NameSpace string `default:"GPUMonitor"`
+	Region    string `default:"us-east-1"`
+}
+
 func init() {
 	Metrics = map[string]Metric{}
 	Metrics["gpu_usage"] = Metric{MetricName: "GPUUsage", Unit: "Percent"}
 	Metrics["memory_usage"] = Metric{MetricName: "MemoryUsage", Unit: "Percent"}
 	Metrics["temperature"] = Metric{MetricName: "Temperature", Unit: "None"}
+
+	if err := envconfig.Process("", &cwConfig); err != nil {
+		log.Fatal(err)
+	}
 }
 
-func NewClient(ctx context.Context, region string) (*Client, error) {
+func NewClient(ctx context.Context) (*Client, error) {
 	sess := session.Must(session.NewSession(
-		&aws.Config{Region: aws.String(region)},
+		&aws.Config{Region: aws.String(cwConfig.Region)},
 	))
 	instanceID, err := getInstanceId(sess)
 	if err != nil {
@@ -58,7 +71,7 @@ func NewClient(ctx context.Context, region string) (*Client, error) {
 
 func (client *Client) ReportGpuMetrics(metric string, value float64) error {
 	if _, err := client.cloudwatchSvc.PutMetricData(&cloudwatch.PutMetricDataInput{
-		Namespace:  aws.String(NameSpace),
+		Namespace:  aws.String(cwConfig.NameSpace),
 		MetricData: client.buildCloudWatchMetricDatum(metric, value),
 	}); err != nil {
 		return err
