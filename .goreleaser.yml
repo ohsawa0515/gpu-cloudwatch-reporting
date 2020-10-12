@@ -1,14 +1,17 @@
 builds:
-  - binary: gpu-cloudwatch-reporting
+  - env:
+    - CGO_ENABLED=1
+    binary: gpu-cloudwatch-reporting
     goos:
       - linux
     goarch:
       - amd64
-archive:
-  format: tar.gz
-  name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
-  files:
-    - README.md
+archives:
+  -
+    format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
 release:
   github:
     owner: ohsawa0515
