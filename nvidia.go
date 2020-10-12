@@ -42,7 +42,6 @@ func (client *Client) gpuUtilizationTicker(ctx context.Context, devices []*nvml.
 	for {
 		select {
 		case <-sendTicker.C:
-			fmt.Println(metric)
 			sentMetric := metric / float64(count)
 			if err := client.ReportGpuMetrics("gpu_usage", float64(sentMetric)); err != nil {
 				return err
