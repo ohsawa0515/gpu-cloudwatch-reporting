@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
 	"github.com/kelseyhightower/envconfig"
@@ -52,26 +51,6 @@ func init() {
 	if err := envconfig.Process("", &cwConfig); err != nil {
 		log.Fatal(err)
 	}
-}
-
-// NewClient creates a new client of CloudWatch.
-func NewClient(ctx context.Context) (*Client, error) {
-	sess := session.Must(session.NewSession(
-		&aws.Config{Region: aws.String(cwConfig.Region)},
-	))
-	instanceID, err := getInstanceID(sess)
-	if err != nil {
-		return nil, err
-	}
-	autoScalingGroupName, err := getAutoScalingGroupName(sess, instanceID)
-	if err != nil {
-		return nil, err
-	}
-	return &Client{
-		instanceID:           instanceID,
-		autoScalingGroupName: autoScalingGroupName,
-		cloudwatchSvc:        cloudwatch.New(sess),
-	}, nil
 }
 
 // ReportGpuMetrics send gpu metrics to CloudWatch.

@@ -31,7 +31,7 @@ func init() {
 	}
 }
 
-func gpuUtilizationTicker(ctx context.Context, client *Client, devices []*nvml.Device) error {
+func (client *Client) gpuUtilizationTicker(ctx context.Context, devices []*nvml.Device) error {
 	sendTicker := time.NewTicker(nvidiaConfig.SendIntervalSecond)
 	collectTicker := time.NewTicker(nvidiaConfig.CollectIntervalSecond)
 	defer sendTicker.Stop()
@@ -65,7 +65,7 @@ func gpuUtilizationTicker(ctx context.Context, client *Client, devices []*nvml.D
 	}
 }
 
-func gpuMemoryUtilizationTicker(ctx context.Context, client *Client, devices []*nvml.Device) error {
+func (client *Client) gpuMemoryUtilizationTicker(ctx context.Context, devices []*nvml.Device) error {
 	sendTicker := time.NewTicker(nvidiaConfig.SendIntervalSecond)
 	collectTicker := time.NewTicker(nvidiaConfig.CollectIntervalSecond)
 	defer sendTicker.Stop()
@@ -98,7 +98,7 @@ func gpuMemoryUtilizationTicker(ctx context.Context, client *Client, devices []*
 	}
 }
 
-func gpuTemperatureTicker(ctx context.Context, client *Client, devices []*nvml.Device) error {
+func (client *Client) gpuTemperatureTicker(ctx context.Context, devices []*nvml.Device) error {
 	sendTicker := time.NewTicker(nvidiaConfig.SendIntervalSecond)
 	collectTicker := time.NewTicker(nvidiaConfig.CollectIntervalSecond)
 	defer sendTicker.Stop()
@@ -157,7 +157,7 @@ func signalContext(ctx context.Context) context.Context {
 }
 
 // Run runs collect and send gpu metrics.
-func Run() error {
+func (client *Client) Run(ctx context.Context) error {
 	if err := nvml.Init(); err != nil {
 		return err
 	}
@@ -177,25 +177,19 @@ func Run() error {
 		devices = append(devices, device)
 	}
 
-	ctx := context.Background()
-	client, err := NewClient(ctx)
-	if err != nil {
-		return err
-	}
-
 	parent := signalContext(ctx)
 	eg, child := errgroup.WithContext(parent)
 
 	eg.Go(func() error {
-		return gpuUtilizationTicker(child, client, devices)
+		return client.gpuUtilizationTicker(child, devices)
 	})
 
 	eg.Go(func() error {
-		return gpuMemoryUtilizationTicker(child, client, devices)
+		return client.gpuMemoryUtilizationTicker(child, devices)
 	})
 
 	eg.Go(func() error {
-		return gpuTemperatureTicker(child, client, devices)
+		return client.gpuTemperatureTicker(child, devices)
 	})
 
 	return eg.Wait()
