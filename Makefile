@@ -1,4 +1,4 @@
-VERSION := "v0.2.0"
+VERSION := "v0.2.1"
 REVISION := $(shell git rev-parse --short HEAD)
 LDFLAGS := -X 'main.version=$(VERSION)' \
         -X 'main.revision=$(REVISION)'
