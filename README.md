@@ -8,6 +8,14 @@ This tool is able to supports Linux only.
 
 ## Installation
 
+### Docker pull
+
+You can get Docker image from [GitHub Container Registry](https://github.com/users/ohsawa0515/packages/container/package/gpu-cloudwatch-reporting)
+
+```console
+$ docker pull ghcr.io/ohsawa0515/gpu-cloudwatch-reporting:<TAG_NAME>
+```
+
 ### Download binary
 
 Download it from [releases page](https://github.com/ohsawa0515/gpu-cloudwatch-reporting/releases) and extract it to `/usr/local/bin`.
@@ -54,11 +62,12 @@ $ systemctl start gpu-cloudwatch-reporting.service
 NVIDIA driver is required. Please install from [here](https://github.com/NVIDIA/nvidia-docker#quickstart).
 
 ```console
-$ docker pull ohsawa0515/gpu-cloudwatch-reporting:latest
+$ docker pull ghcr.io/ohsawa0515/gpu-cloudwatch-reporting:<TAG_NAME>
 $ docker run -d --gpus=all --rm \
       -e REGION=us-east-1 \
       -e NAMESPACE=GPUMonitor \
       -e SEND_INTERVAL_SECOND=60s \
       -e COLLECT_INTERVAL_SECOND=5s \
-      ohsawa0515/gpu-cloudwatch-reporting:latest
+      ghcr.io/ohsawa0515/gpu-cloudwatch-reporting:<TAG_NAME>
 ```
+
